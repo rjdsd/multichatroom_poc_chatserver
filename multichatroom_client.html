@@ -1,0 +1,48 @@
+<h2>clientID</h2>
+<input id="clientid" type="text" />
+<h2>chatroom</h2>
+<input id="chatroom" type="text" />
+<button onclick="joinChatRoom()">JoinChatRoom</button>
+<h2>EnterMessage</h2>
+<input id="message" type="text" />
+<button onclick="sendMsg()">SendMsg</button>
+<pre id="output"></pre>
+<script>
+    var input = document.getElementById("message");
+    var output = document.getElementById("output");
+    var socket = new WebSocket("ws://localhost:8086/joinChatServer");
+
+    socket.onopen = function () {
+        output.innerHTML += "Status: Connected\n";
+    };
+
+    socket.onmessage = function (e) {
+        output.innerHTML += e.data + "\n";
+    };
+
+    function joinChatServer() {
+        socket.send();
+    }
+
+    function joinChatRoom() {
+        let xhr = new XMLHttpRequest();
+        let url = "http://localhost:8086/joinChatRoom";
+        xhr.open("POST", url, true)
+        xhr.setRequestHeader("Content-Type", "application/json");
+        var clientid = document.getElementById("clientid");
+        var chatRoom = document.getElementById("chatroom");
+        var data = JSON.stringify({"clientid": clientid.value, "chatroomname": chatRoom.value});
+        xhr.send(data);
+    }
+
+    function sendMsg() {
+        let xhr = new XMLHttpRequest();
+        let url = "http://localhost:8086/sendMsg";
+        xhr.open("POST", url, true)
+        var clientid = document.getElementById("clientid");
+        var chatRoom = document.getElementById("chatroom");
+        xhr.setRequestHeader("Content-Type", "application/json");
+        var data = JSON.stringify({"chatroom": chatRoom.value,"text": input.value, "username": "groupmember"});
+        xhr.send(data);
+    }
+</script>
