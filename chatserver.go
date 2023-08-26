@@ -81,7 +81,8 @@ func (chatServer *ChatServer) ClientConnectHandler(w http.ResponseWriter, r *htt
 	}
 	clientId := uuid.New().String()
 	chatServer.ClientConns[clientId] = ws
-	ws.WriteMessage(websocket.TextMessage, []byte(clientId))
+	msg := "ClientID---" + clientId + "---use it to connect chatserver"
+	ws.WriteMessage(websocket.TextMessage, []byte(msg))
 	fmt.Println("joined ChatServer, ClientID:", clientId)
 }
 
@@ -111,10 +112,7 @@ func (chatServer *ChatServer) JoinChatRoomHandler(w http.ResponseWriter, r *http
 	}
 	chatRoom.ClientConns[connection] = true
 
-	var chatMsg ChatMessage
-	chatMsg.ChatRoom = joinRoom.ChatRoomName
-	chatMsg.Username = "ChatServer"
-	chatMsg.Text = "new user joined chatroom"
+	chatMsg := ChatMessage{ChatRoom: joinRoom.ChatRoomName, Username: "ChatServer", Text: "new user joined chatroom"}
 	chatServer.SendMessageToMembers(&chatMsg)
 
 	fmt.Println("chat user could joined ChatRoom:", joinRoom.ChatRoomName, chatRoom.ClientConns)
@@ -138,7 +136,7 @@ func (chatServer *ChatServer) SendMessageToMembers(chatMsg *ChatMessage) {
 		return
 	}
 	memberConns := chatRoom.ClientConns
-	msg := chatMsg.Username + ":" + chatMsg.Text
+	msg := formatMessage(chatMsg)
 	for wsClientCon, connectionAlive := range memberConns {
 		if connectionAlive {
 			wsClientCon.WriteMessage(websocket.TextMessage, []byte(msg))
@@ -150,4 +148,11 @@ func allowCORS(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST,GET,OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+}
+
+func formatMessage(chatMsg *ChatMessage) string {
+	var msg string
+	msg = "[[==" + chatMsg.ChatRoom + "==]]"
+	msg = msg + chatMsg.Username + ":" + chatMsg.Text
+	return msg
 }
