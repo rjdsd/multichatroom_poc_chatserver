@@ -93,14 +93,30 @@ func (chatServer *ChatServer) JoinChatRoomHandler(w http.ResponseWriter, r *http
 		fmt.Println("Error decoding packet, dropping", err)
 		return
 	}
+	if joinRoom.ClientID == "" || joinRoom.ChatRoomName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("ClientID or ChatRoomName is missing"))
+	}
 	fmt.Println("received request to add chat user to ChatRoom:", joinRoom.ChatRoomName, joinRoom.ClientID)
 	chatRoom, ok := chatServer.ChatRooms[joinRoom.ChatRoomName]
 	if !ok {
 		fmt.Println("ChatRoom Doesn't Exist:", joinRoom.ChatRoomName)
 		return
 	}
-	connection := chatServer.ClientConns[joinRoom.ClientID]
+
+	connection, isValid := chatServer.ClientConns[joinRoom.ClientID]
+	if !isValid {
+		fmt.Println("client Doesn't Exist:")
+		return
+	}
 	chatRoom.ClientConns[connection] = true
+
+	var chatMsg ChatMessage
+	chatMsg.ChatRoom = joinRoom.ChatRoomName
+	chatMsg.Username = "ChatServer"
+	chatMsg.Text = "new user joined chatroom"
+	chatServer.SendMessageToMembers(&chatMsg)
+
 	fmt.Println("chat user could joined ChatRoom:", joinRoom.ChatRoomName, chatRoom.ClientConns)
 }
 
@@ -112,6 +128,10 @@ func (chatServer *ChatServer) SendMessageHandler(w http.ResponseWriter, r *http.
 		fmt.Println("Error decoding empty packet, dropping", err)
 		return
 	}
+	chatServer.SendMessageToMembers(&chatMsg)
+}
+
+func (chatServer *ChatServer) SendMessageToMembers(chatMsg *ChatMessage) {
 	chatRoom, ok := chatServer.ChatRooms[chatMsg.ChatRoom]
 	if !ok {
 		fmt.Println("ChatRoom Doesn't Exist:", chatMsg.ChatRoom)
@@ -124,7 +144,6 @@ func (chatServer *ChatServer) SendMessageHandler(w http.ResponseWriter, r *http.
 			wsClientCon.WriteMessage(websocket.TextMessage, []byte(msg))
 		}
 	}
-	fmt.Println("send message to all group members in ChatRoom:", chatMsg.ChatRoom)
 }
 
 func allowCORS(w http.ResponseWriter) {
